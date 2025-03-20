@@ -35,52 +35,101 @@ public class SalesReader {
     }
 
     public BigDecimal totalOfCompletedSales() {
-        // TODO implementar
-        return BigDecimal.ZERO;
+        return sales.stream()
+                .filter(sale -> sale.getStatus() == Sale.Status.COMPLETED)
+                .map(Sale::getValue)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public BigDecimal totalOfCancelledSales() {
-        // TODO implementar
-        return BigDecimal.ZERO;
+        return sales.stream()
+                .filter(sale -> sale.getStatus() == Sale.Status.CANCELLED)
+                .map(Sale::getValue)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public Optional<Sale> mostRecentCompletedSale() {
-        // TODO implementar
-        return Optional.empty();
+        return sales.stream()
+                .filter(sale -> sale.getStatus() == Sale.Status.COMPLETED)
+                .max(Comparator.comparing(Sale::getSaleDate));
     }
 
     public long daysBetweenFirstAndLastCancelledSale() {
-        // TODO implementar
-        return 0;
+        return sales.stream()
+                .filter(sale -> sale.getStatus() == Sale.Status.CANCELLED)
+                .map(Sale::getSaleDate)
+                .sorted()
+                .toList()
+                .stream()
+                .reduce((first, last) -> last)
+                .map(lastDate -> sales.stream()
+                        .filter(sale -> sale.getStatus() == Sale.Status.CANCELLED)
+                        .map(Sale::getSaleDate)
+                        .min(Comparator.naturalOrder())
+                        .map(firstDate -> java.time.temporal.ChronoUnit.DAYS.between(firstDate, lastDate))
+                                                                                                          
+                        .orElse(0L))
+                .orElse(0L);
     }
 
     public BigDecimal totalCompletedSalesBySeller(String sellerName) {
-        // TODO implementar
-        return BigDecimal.ZERO;
+        return sales.stream()
+                .filter(sale -> sale.getStatus() == Sale.Status.COMPLETED)
+                .filter(sale -> sale.getSeller().equalsIgnoreCase(sellerName))
+                .map(Sale::getValue)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public long countAllSalesByManager(String managerName) {
-        // TODO implementar
-        return 0;
+        return sales.stream()
+                .filter(sale -> sale.getManager().equalsIgnoreCase(managerName))
+                .count();
     }
 
     public BigDecimal totalSalesByStatusAndMonth(Sale.Status status, Month... months) {
-        // TODO implementar
-        return BigDecimal.ZERO;
+        List<Month> monthList = Arrays.asList(months);
+
+        return sales.stream()
+                .filter(sale -> sale.getStatus() == status)
+                .filter(sale -> monthList.contains(sale.getSaleDate().getMonth()))
+                .map(Sale::getValue)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public Map<String, Long> countCompletedSalesByDepartment() {
-        // TODO implementar
-        return Map.of();
+        return sales.stream()
+                .filter(sale -> sale.getStatus() == Sale.Status.COMPLETED)
+                .collect(Collectors.groupingBy(Sale::getDepartment, Collectors.counting()));
     }
 
     public Map<Integer, Map<String, Long>> countCompletedSalesByPaymentMethodAndGroupingByYear() {
-        // TODO implementar
-        return Map.of();
+        return sales.stream()
+                .filter(sale -> sale.getStatus() == Sale.Status.COMPLETED)
+                .collect(Collectors.groupingBy(
+                        sale -> sale.getSaleDate().getYear(),
+                        Collectors.groupingBy(
+                                Sale::getPaymentMethod,
+                                Collectors.counting()
+                        )
+                ));
     }
 
     public Map<String, BigDecimal> top3BestSellers() {
-        // TODO implementar
-        return Map.of();
+        return sales.stream()
+                .filter(sale -> sale.getStatus() == Sale.Status.COMPLETED)
+                .collect(Collectors.groupingBy(
+                        Sale::getSeller,
+                        Collectors.mapping(Sale::getValue, Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                ))
+                .entrySet().stream()
+                .sorted(Map.Entry.<String, BigDecimal>comparingByValue(Comparator.reverseOrder()))
+                .limit(3)
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (existing, replacement) -> existing,
+                        LinkedHashMap::new
+                ));
     }
 }
+
